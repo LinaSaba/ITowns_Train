@@ -1,3 +1,5 @@
+const ITOWNS_GPX_PARSER_OPTIONS = { in: { crs: 'EPSG:2975' }, out: { crs: 'EPSG:2975', mergeFeatures: true } };
+
 // Retrieve the view container
 const viewerDiv = document.getElementById('viewerDiv');
 
@@ -48,3 +50,36 @@ const sourceDEM = new itowns.WMSSource({
 // Create the dem ElevationLayer and add it to the view
 const layerDEM = new itowns.ElevationLayer('DEM', { source: sourceDEM });
 view.addLayer(layerDEM);
+
+itowns.Fetcher.xml('./assets/GrandRaid.gpx')
+    .then(gpx => itowns.GpxParser.parse(gpx, ITOWNS_GPX_PARSER_OPTIONS))
+    .then(parsedGPX => {
+        console.log(parsedGPX.features[0].vertices)
+        const allGPXcoord = parsedGPX.features[0].vertices;
+        displayPath(allGPXcoord)
+    });
+
+function displayPath(vertices) {
+    let coordList = [];
+    for (let i = 0; i < vertices.length / 3; i++) {
+        coordList.push(new itowns.Coordinates('EPSG:4326', vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]).as(view.referenceCrs).toVector3());
+        console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]).x * 180 / 3.14)
+    }
+
+    const curve = new itowns.THREE.CatmullRomCurve3(coordList, false);
+    const points = curve.getPoints(500);
+    //console.log(points);
+    //console.log(view.camera.camera3D);
+
+    const geometry = new itowns.THREE.BufferGeometry().setFromPoints(points);
+    const material = new itowns.THREE.LineBasicMaterial({ color: 0xff0000 });
+
+    // Create the final object to add to the scene
+    const curveObject = new itowns.THREE.Line(geometry, material);
+    console.log(curveObject);
+
+    //view.rende.setClearColor(0x00ff00, 0);
+
+    view.scene.add(curveObject);
+    //view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z);
+};
