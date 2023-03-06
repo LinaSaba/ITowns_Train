@@ -1,3 +1,5 @@
+
+
 // Retrieve the view container
 const viewerDiv = document.getElementById('viewerDiv');
 
@@ -11,6 +13,8 @@ const viewExtent = new itowns.Extent(
     300000.0, 400000.0,
     7630000.0, 7700000.0,
 );
+
+
 
 // Define the camera initial placement
 const placement = {
@@ -48,3 +52,5 @@ const sourceDEM = new itowns.WMSSource({
 // Create the dem ElevationLayer and add it to the view
 const layerDEM = new itowns.ElevationLayer('DEM', { source: sourceDEM });
 view.addLayer(layerDEM);
+
+loadData();
