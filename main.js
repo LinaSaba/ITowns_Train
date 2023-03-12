@@ -1,5 +1,3 @@
-const ITOWNS_GPX_PARSER_OPTIONS = { in: { crs: 'EPSG:2975' }, out: { crs: 'EPSG:2975', mergeFeatures: true } };
-
 // Retrieve the view container
 const viewerDiv = document.getElementById('viewerDiv');
 
@@ -13,6 +11,8 @@ const viewExtent = new itowns.Extent(
     300000.0, 400000.0,
     7630000.0, 7700000.0,
 );
+
+const ITOWNS_GPX_PARSER_OPTIONS = { in: { crs: 'EPSG:4326' }, out: { crs: 'EPSG:4326', mergeFeatures: true } };
 
 // Define the camera initial placement
 const placement = {
@@ -54,21 +54,49 @@ view.addLayer(layerDEM);
 itowns.Fetcher.xml('./assets/GrandRaid.gpx')
     .then(gpx => itowns.GpxParser.parse(gpx, ITOWNS_GPX_PARSER_OPTIONS))
     .then(parsedGPX => {
-        console.log(parsedGPX.features[0].vertices)
+        //console.log(parsedGPX.features[0].vertices)
         const allGPXcoord = parsedGPX.features[0].vertices;
         displayPath(allGPXcoord)
     });
+/* tests
+const gpxStyle = new itowns.Style({
+    zoom: { min: 9 },
+    stroke: { color: 'red' },
+    point: {
+        color: 'white',
+        line: 'red',
+    },
+    text: {
+        field: '{name}',
+        transform: 'uppercase',
+        font: ['Arial', 'sans-serif'],
+        haloColor: 'white',
+        haloWidth: 1,
+    },
+});
 
+const gpxLayer = new itowns.ColorLayer('Gpx', {
+    source: './assets/GrandRaid.gpx',
+    style: gpxStyle,
+    addLabelLayer: true,
+});
+
+view.addLayer(gpxLayer);
+*/
 function displayPath(vertices) {
+
     let coordList = [];
-    for (let i = 0; i < vertices.length / 3; i++) {
-        coordList.push(new itowns.Coordinates('EPSG:4326', vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]).as(view.referenceCrs).toVector3());
-        console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2]).x * 180 / 3.14)
+
+    //coordList.push(new itowns.THREE.Vector3(349061.88680361793, 7666676.953710422, 2000))
+
+    for (let i = 0; i < vertices.length / 2; i++) {
+        coordList.push(new itowns.Coordinates('EPSG:4326', vertices[i * 2],vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
+        console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 2], vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
     }
 
     const curve = new itowns.THREE.CatmullRomCurve3(coordList, false);
-    const points = curve.getPoints(500);
-    //console.log(points);
+    const points = curve.getPoints(vertices.length / 2);
+    console.log(points);
     //console.log(view.camera.camera3D);
 
     const geometry = new itowns.THREE.BufferGeometry().setFromPoints(points);
@@ -78,8 +106,15 @@ function displayPath(vertices) {
     const curveObject = new itowns.THREE.Line(geometry, material);
     console.log(curveObject);
 
-    //view.rende.setClearColor(0x00ff00, 0);
+    let geometryS = new itowns.THREE.SphereGeometry(200, 320, 320);
+    let materialS = new itowns.THREE.MeshBasicMaterial({ color: 0xff0000 });
+    let mesh = new itowns.THREE.Mesh(geometryS, materialS);
+    mesh.position.copy(new itowns.THREE.Vector3(349061.88680361793, 7666676.953710422, 2000));
+    mesh.updateMatrixWorld();
+    view.scene.add(mesh);
 
+    curveObject.updateMatrixWorld();
     view.scene.add(curveObject);
-    //view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z);
+    //view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z+100);
+    /* décommenter pour voir la trace gpx */
 };
