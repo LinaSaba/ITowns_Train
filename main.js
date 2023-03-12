@@ -17,7 +17,7 @@ const ITOWNS_GPX_PARSER_OPTIONS = { in: { crs: 'EPSG:4326' }, out: { crs: 'EPSG:
 // Define the camera initial placement
 const placement = {
     coord: viewExtent.center(),
-    tilt: 12,
+    tilt: 52,
     heading: 40,
     range: 16000,
 };
@@ -51,14 +51,23 @@ const sourceDEM = new itowns.WMSSource({
 const layerDEM = new itowns.ElevationLayer('DEM', { source: sourceDEM });
 view.addLayer(layerDEM);
 
-itowns.Fetcher.xml('./assets/GrandRaid.gpx')
+itowns.Fetcher.xml('./assets/diag.gpx')
     .then(gpx => itowns.GpxParser.parse(gpx, ITOWNS_GPX_PARSER_OPTIONS))
     .then(parsedGPX => {
         //console.log(parsedGPX.features[0].vertices)
         const allGPXcoord = parsedGPX.features[0].vertices;
         displayPath(allGPXcoord)
     });
-/* tests
+
+const gpxSource = new itowns.FileSource({
+    url: './assets/diag.gpx',
+    crs: 'EPSG:4326',
+    format: 'application/gpx',
+});
+
+console.log("gpxSource");
+console.log(gpxSource);
+
 const gpxStyle = new itowns.Style({
     zoom: { min: 9 },
     stroke: { color: 'red' },
@@ -76,13 +85,13 @@ const gpxStyle = new itowns.Style({
 });
 
 const gpxLayer = new itowns.ColorLayer('Gpx', {
-    source: './assets/GrandRaid.gpx',
+    source: gpxSource,
     style: gpxStyle,
     addLabelLayer: true,
 });
 
 view.addLayer(gpxLayer);
-*/
+
 function displayPath(vertices) {
 
     let coordList = [];
@@ -91,7 +100,7 @@ function displayPath(vertices) {
 
     for (let i = 0; i < vertices.length / 2; i++) {
         coordList.push(new itowns.Coordinates('EPSG:4326', vertices[i * 2],vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
-        console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 2], vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
+        //console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 2], vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
     }
 
     const curve = new itowns.THREE.CatmullRomCurve3(coordList, false);
@@ -115,6 +124,6 @@ function displayPath(vertices) {
 
     curveObject.updateMatrixWorld();
     view.scene.add(curveObject);
-    //view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z+100);
+    view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z+100);
     /* décommenter pour voir la trace gpx */
 };
