@@ -51,70 +51,65 @@ const sourceDEM = new itowns.WMSSource({
 const layerDEM = new itowns.ElevationLayer('DEM', { source: sourceDEM });
 view.addLayer(layerDEM);
 
-itowns.Fetcher.xml('./assets/GrandRaid.gpx')
-    .then(gpx => itowns.GpxParser.parse(gpx, ITOWNS_GPX_PARSER_OPTIONS))
-    .then(parsedGPX => {
-        //console.log(parsedGPX.features[0].vertices)
-        const allGPXcoord = parsedGPX.features[0].vertices;
-        displayPath(allGPXcoord)
-    });
-/* tests
-const gpxStyle = new itowns.Style({
-    zoom: { min: 9 },
-    stroke: { color: 'red' },
-    point: {
-        color: 'white',
-        line: 'red',
-    },
-    text: {
-        field: '{name}',
-        transform: 'uppercase',
-        font: ['Arial', 'sans-serif'],
-        haloColor: 'white',
-        haloWidth: 1,
-    },
+
+// update the waypoint
+var distance, scale, point = new itowns.THREE.Vector3();
+var size = new itowns.THREE.Vector2();
+function updatePointScale(renderer, scene, camera) {
+    point.copy(this.geometry.boundingSphere.center).applyMatrix4(this.matrixWorld);;
+    distance = camera.position.distanceTo(point);
+    renderer.getSize(size);
+    scale = Math.max(2, Math.min(100, distance / size.y));
+    this.scale.set(scale, scale, scale);
+    this.updateMatrixWorld();
+}
+
+var waypointGeometry = new itowns.THREE.BoxGeometry(1, 1, 80);
+var waypointMaterial = new itowns.THREE.MeshBasicMaterial({ color: 0xffffff });
+// Listen for globe full initialisation event
+view.addEventListener(itowns.GLOBE_VIEW_EVENTS.GLOBE_INITIALIZED, function () {
+    console.info('Globe initialized');
+    itowns.Fetcher.xml('./assets/diag.gpx')
+        .then(gpx => itowns.GpxParser.parse(gpx, {
+            in: {
+                crs: 'EPSG:4326',
+            },
+            out: {
+                crs: view.referenceCrs,
+                structure: '3d',
+                style: new itowns.Style({
+                    stroke: {
+                        color: 'red',
+                        width: 2
+                    },
+                    point: {
+                        color: 'white'
+                    }
+                })
+            }
+        }))
+        .then(itowns.Feature2Mesh.convert())
+        .then(function (mesh) {
+            console.log(mesh);
+            if (mesh) {
+                mesh.updateMatrixWorld();
+                mesh.traverse((m) => {
+                    if (m.type == 'Line') {
+                        var vertices = m.feature.vertices;
+                        console.log(vertices);
+                        for (var i = 0; i < vertices.length; i += 3) {
+                            var waypoint = new itowns.THREE.Mesh(waypointGeometry, waypointMaterial);
+                            waypoint.position.fromArray(vertices, i);
+                            waypoint.lookAt(mesh.worldToLocal(new itowns.THREE.Vector3()));
+                            waypoint.onBeforeRender = updatePointScale;
+                            waypoint.updateMatrix();
+                            mesh.add(waypoint);
+                            waypoint.updateMatrixWorld();
+                        }
+                    }
+                });
+                view.scene.add(mesh);
+                view.notifyChange();
+            }
+        });
 });
-
-const gpxLayer = new itowns.ColorLayer('Gpx', {
-    source: './assets/GrandRaid.gpx',
-    style: gpxStyle,
-    addLabelLayer: true,
-});
-
-view.addLayer(gpxLayer);
-*/
-function displayPath(vertices) {
-
-    let coordList = [];
-
-    //coordList.push(new itowns.THREE.Vector3(349061.88680361793, 7666676.953710422, 2000))
-
-    for (let i = 0; i < vertices.length / 2; i++) {
-        coordList.push(new itowns.Coordinates('EPSG:4326', vertices[i * 2],vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
-        console.log(new itowns.Coordinates('EPSG:4326', vertices[i * 2], vertices[i * 2 + 1], 3000).as(view.referenceCrs).toVector3());
-    }
-
-    const curve = new itowns.THREE.CatmullRomCurve3(coordList, false);
-    const points = curve.getPoints(vertices.length / 2);
-    console.log(points);
-    //console.log(view.camera.camera3D);
-
-    const geometry = new itowns.THREE.BufferGeometry().setFromPoints(points);
-    const material = new itowns.THREE.LineBasicMaterial({ color: 0xff0000 });
-
-    // Create the final object to add to the scene
-    const curveObject = new itowns.THREE.Line(geometry, material);
-    console.log(curveObject);
-
-    let geometryS = new itowns.THREE.SphereGeometry(200, 320, 320);
-    let materialS = new itowns.THREE.MeshBasicMaterial({ color: 0xff0000 });
-    let mesh = new itowns.THREE.Mesh(geometryS, materialS);
-    mesh.position.copy(new itowns.THREE.Vector3(349061.88680361793, 7666676.953710422, 2000));
-    mesh.updateMatrixWorld();
-    view.scene.add(mesh);
-
-    curveObject.updateMatrixWorld();
-    view.scene.add(curveObject);
-    //view.camera.camera3D.position.set(points[0].x, points[0].y, points[0].z+100);
-    /* décommenter pour voir la trace gpx */
-};
